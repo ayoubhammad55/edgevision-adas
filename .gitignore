@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data and videos
+data/
+datasets/
+videos/
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Models / weights
+models/
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.bin
+
+# Benchmark outputs
+benchmarks/results/
+benchmarks/reports/
+
+# Logs
+*.log
+
+# Raspberry Pi
+*.pid
