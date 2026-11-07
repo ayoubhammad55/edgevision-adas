@@ -1,0 +1,4 @@
+timestamp,run,video,resolution,source_fps,metadata_frame_count,decoded_frames,metadata_count_difference,metadata_count_matches,total_time_s,average_fps,average_latency_ms,median_latency_ms,p95_latency_ms,average_cpu_percent,peak_ram_mb,architecture,opencv_version
+2026-11-07T16:20:46,1,Manhattan.mp4,1280x720,30.0,2688,2685,3,False,19.308,139.06,6.381,5.808,10.445,195.86,92.75,AMD64,5.0.0
+2026-11-07T16:21:00,2,Manhattan.mp4,1280x720,30.0,2688,2685,3,False,14.794,181.49,5.484,4.935,8.509,227.61,94.4,AMD64,5.0.0
+2026-11-07T16:21:20,3,Manhattan.mp4,1280x720,30.0,2688,2685,3,False,19.824,135.45,7.364,6.171,13.573,186.72,95.77,AMD64,5.0.0
