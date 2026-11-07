@@ -1,0 +1,6 @@
+model,video,device,image_size,frames,inference_fps,pipeline_fps,average_latency_ms,median_latency_ms,p95_latency_ms,total_time_seconds,process_ram_mb
+yolo11n.pt,Manhattan.mp4,cpu,640,100,3.24,2.8,308.4,271.22,574.17,35.66,388.61
+yolo11n.pt,Manhattan.mp4,cpu,640,100,6.48,5.35,154.44,131.95,312.85,18.69,391.36
+yolo11n.pt,Manhattan.mp4,cpu,640,100,8.18,6.56,122.32,116.25,162.47,15.24,391.58
+yolo11n.pt,Manhattan.mp4,cpu,640,100,7.99,6.46,125.12,116.19,169.49,15.47,391.57
+yolo11n.pt,Manhattan.mp4,cpu,640,100,6.24,5.16,160.29,149.55,251.47,19.36,392.63

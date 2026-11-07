@@ -93,6 +93,91 @@ The Windows results show variability between runs. They are an initial developme
 
 **Status:** Raspberry Pi benchmark execution and validation are pending.
 
+### Phase 2: Object Detection
+
+#### Model Setup
+
+- [x] Detection source directory created: `src/detection/`.
+- [x] Detection results directory created: `results/detection/`.
+- [x] Model directory created: `models/`.
+- [x] Ultralytics installed in the Windows virtual environment.
+- [x] Pretrained YOLO11n weights downloaded.
+- [x] Model loading and configuration verified.
+- [x] Video object detection script implemented.
+- [x] Initial detection performed on recorded video.
+- [x] Annotated output video generated.
+- [x] Detection benchmark CSV export implemented.
+
+#### Model Configuration
+
+- Model: YOLO11n
+- Task: Object detection
+- Architecture: DetectionModel
+- Layers: 181
+- Parameters: 2,624,080
+- Parameter precision: FP32
+- Weight file size: 5.35 MB
+- Number of classes: 80 (COCO)
+- Input image size: 640 × 640
+- Computational complexity: 6.7 GFLOPs
+
+The model is pretrained. No additional training or fine-tuning was performed as part of this project. Current experiments focus on inference performance and deployment optimization.
+
+#### Detection Test Configuration
+
+- Platform: Windows
+- Execution device: CPU
+- Video: `Manhattan.mp4`
+- Video resolution: 1280 × 720
+- Source frame rate: 30 FPS
+- Maximum processed frames per run: 100
+- Model: YOLO11n
+- Input image size: 640 × 640
+- Confidence threshold: 0.25
+- Number of benchmark runs: 5
+
+#### Five-Run Windows FP32 Results
+
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5 |
+|---|---:|---:|---:|---:|---:|
+| Inference FPS | 3.24 | 6.48 | 8.18 | 7.99 | 6.24 |
+| Pipeline FPS | 2.80 | 5.35 | 6.56 | 6.46 | 5.16 |
+| Average latency (ms) | 308.40 | 154.44 | 122.32 | 125.12 | 160.29 |
+| Median latency (ms) | 271.22 | 131.95 | 116.25 | 116.19 | 149.55 |
+| P95 latency (ms) | 574.17 | 312.85 | 162.47 | 169.49 | 251.47 |
+| RAM at end (MB) | 388.61 | 391.36 | 391.58 | 391.57 | 392.63 |
+
+#### Five-Run Median Baseline
+
+| Metric | Median Result |
+|---|---:|
+| Inference FPS | **6.48** |
+| Pipeline FPS | **5.35** |
+| Average inference latency | **154.44 ms** |
+| Median inference latency | **131.95 ms** |
+| P95 inference latency | **251.47 ms** |
+| Process RAM at end | **391.57 MB** |
+
+The median values were independently calculated from the benchmark CSV.
+
+**Measurement definitions:**
+
+- Inference FPS: processed frames divided by cumulative `model.predict()` execution time.
+- Pipeline FPS: processed frames divided by total processing-loop time.
+- Inference latency: time spent in the Ultralytics prediction call, including its preprocessing and postprocessing.
+- RAM at end: process resident memory measured after processing. It is not peak RAM usage.
+
+The five runs show noticeable performance variation, particularly in the first run. The five-run median is used as the preliminary reference rather than selecting the fastest result.
+
+#### Detection Files
+
+- Detection script: `src/detection/detect_video.py`
+- Model weights: `models/yolo11n.pt` (excluded from Git)
+- Annotated output: `results/detection/manhattan_yolo11n.mp4` (excluded from Git)
+- Benchmark results: `results/detection/detection_benchmark.csv`
+
+**Status:** Windows FP32 detection baseline established. Raspberry Pi deployment and validation are pending.
+
 ---
 
 ## Important Methodology Rules
@@ -101,18 +186,24 @@ The Windows results show variability between runs. They are an initial developme
 - Record actual measurements.
 - Keep experiments reproducible.
 - Distinguish video decoding FPS from AI inference FPS.
+- Distinguish model inference latency from complete pipeline throughput.
 - Record hardware and software configurations.
 - Use recorded videos initially.
 - Camera input is optional.
+- Keep original FP32 model results as the reference for optimization comparisons.
+- Compare optimized models under the same test conditions.
 - Do not use the prototype for vehicle control or real-world driving decisions.
 
 ## Next Tasks
 
-1. Commit the video decoding benchmark and official Windows baseline.
-2. Resume Raspberry Pi testing with a suitable power supply.
-3. Obtain a reliable Raspberry Pi decoding baseline.
-4. Implement object detection on recorded videos.
-5. Measure AI inference performance on ARM64.
+1. Validate and commit the five-run Windows YOLO11n FP32 baseline.
+2. Export YOLO11n to ONNX.
+3. Benchmark ONNX inference on Windows CPU.
+4. Compare ONNX performance against the FP32 PyTorch baseline.
+5. Investigate INT8 quantization and its effect on model size, speed and detection accuracy.
+6. Resume Raspberry Pi testing with a suitable power supply.
+7. Obtain reliable Raspberry Pi video decoding and AI inference baselines.
+8. Deploy and benchmark the optimized models on ARM64.
 
 ## Last Updated
 
