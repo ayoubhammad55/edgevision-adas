@@ -1,8 +1,10 @@
 
 import argparse
 import csv
+import math
 import statistics
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import cv2
@@ -16,34 +18,93 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL = ROOT / "models" / "yolo11n.pt"
 DEFAULT_VIDEO = Path.home() / "Downloads" / "Manhattan.mp4"
 DEFAULT_OUTPUT = ROOT / "results" / "detection" / "manhattan_yolo11n.mp4"
-DEFAULT_CSV = ROOT / "results" / "detection" / "detection_benchmark.csv"
+
+# New CSV file to preserve existing benchmark data
+DEFAULT_CSV = ROOT / "results" / "detection" / "benchmark_runs.csv"
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="YOLO11n video object detection benchmark"
+        description="YOLO video object detection benchmark"
     )
 
     parser.add_argument("--video", type=Path, default=DEFAULT_VIDEO)
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--csv", type=Path, default=DEFAULT_CSV)
     parser.add_argument("--max-frames", type=int, default=100)
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--device", default="cpu")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.max_frames < 0:
+        parser.error("--max-frames must be 0 or greater.")
+
+    if args.imgsz <= 0:
+        parser.error("--imgsz must be greater than 0.")
+
+    if not 0 < args.conf < 1:
+        parser.error("--conf must be between 0 and 1.")
+
+    return args
 
 
 def percentile(values, percentage):
+    """Calculate percentile using the nearest-rank method."""
     if not values:
         return 0.0
 
-    return statistics.quantiles(
-        values, n=100
-    )[percentage - 1] if len(values) >= 100 else sorted(values)[
-        min(len(values) - 1, round((percentage / 100) * (len(values) - 1)))
+    ordered = sorted(values)
+    index = max(0, math.ceil(percentage / 100 * len(ordered)) - 1)
+
+    return ordered[index]
+
+
+def save_benchmark(csv_path, row):
+    """Append one benchmark result without overwriting previous runs."""
+
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fields = [
+        "timestamp",
+        "model",
+        "model_format",
+        "video",
+        "device",
+        "image_size",
+        "confidence",
+        "max_frames",
+        "frames",
+        "inference_fps",
+        "pipeline_fps",
+        "average_latency_ms",
+        "median_latency_ms",
+        "p95_latency_ms",
+        "total_time_seconds",
+        "process_ram_mb",
     ]
+
+    file_exists = csv_path.exists() and csv_path.stat().st_size > 0
+
+    if file_exists:
+        with open(csv_path, "r", newline="", encoding="utf-8") as file:
+            existing_fields = next(csv.reader(file), [])
+
+        if existing_fields != fields:
+            raise ValueError(
+                f"CSV columns do not match the expected schema: {csv_path}\n"
+                "Use a new CSV file or move the old file before continuing."
+            )
+
+    with open(csv_path, "a", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=fields)
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow(row)
 
 
 def main():
@@ -55,18 +116,24 @@ def main():
     if not args.model.exists():
         raise FileNotFoundError(f"Model not found: {args.model}")
 
+    model_format = args.model.suffix.lower().lstrip(".")
+    timestamp = datetime.now(timezone.utc).isoformat()
+
     print("=" * 55)
-    print("EDGEVISION - YOLO11n OBJECT DETECTION")
+    print("EDGEVISION - OBJECT DETECTION BENCHMARK")
     print("=" * 55)
 
     print(f"Video: {args.video}")
     print(f"Model: {args.model}")
+    print(f"Model format: {model_format}")
     print(f"Device: {args.device}")
     print(f"Image size: {args.imgsz}")
+    print(f"Confidence: {args.conf}")
     print(f"Maximum frames: {args.max_frames}")
+    print(f"CSV output: {args.csv}")
 
     # Load model
-    print("\nLoading YOLO model...")
+    print("\nLoading model...")
     model = YOLO(str(args.model))
     print("Model loaded successfully.")
 
@@ -91,28 +158,31 @@ def main():
         cap.release()
         raise RuntimeError("Could not read the first video frame.")
 
-    # Warm-up inference (excluded from benchmark measurements)
+    # Warm-up (excluded from benchmark measurements)
     print("\nWarming up model...")
+
     model.predict(
         first_frame,
         imgsz=args.imgsz,
         conf=args.conf,
         device=args.device,
-        verbose=False
+        verbose=False,
     )
+
     print("Warm-up complete.")
 
-    # Prepare output
+    # Prepare output video
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
     output_fps = source_fps if source_fps > 0 else 30.0
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
     writer = cv2.VideoWriter(
         str(args.output),
         fourcc,
         output_fps,
-        (width, height)
+        (width, height),
     )
 
     if not writer.isOpened():
@@ -123,7 +193,6 @@ def main():
     processed_frames = 0
     process = psutil.Process()
 
-    # Process video
     print("\nStarting detection...\n")
 
     start_time = time.perf_counter()
@@ -143,7 +212,7 @@ def main():
                 frame = next_frame
                 next_frame = None
 
-            # Measure model inference
+            # Measure model prediction time
             inference_start = time.perf_counter()
 
             results = model.predict(
@@ -151,7 +220,7 @@ def main():
                 imgsz=args.imgsz,
                 conf=args.conf,
                 device=args.device,
-                verbose=False
+                verbose=False,
             )
 
             inference_end = time.perf_counter()
@@ -160,15 +229,13 @@ def main():
                 (inference_end - inference_start) * 1000
             )
 
-            # Draw detections
+            # Draw detections and save frame
             annotated_frame = results[0].plot()
-
-            # Save annotated frame
             writer.write(annotated_frame)
 
             processed_frames += 1
 
-            # Progress
+            # Progress report
             if processed_frames % 25 == 0:
                 elapsed = time.perf_counter() - start_time
                 current_fps = processed_frames / elapsed
@@ -186,20 +253,22 @@ def main():
         cap.release()
         writer.release()
 
-    # Calculate metrics
     if processed_frames == 0:
         raise RuntimeError("No frames were processed.")
 
+    # Calculate benchmark metrics
     inference_seconds = sum(inference_times) / 1000
 
     inference_fps = (
         processed_frames / inference_seconds
-        if inference_seconds > 0 else 0
+        if inference_seconds > 0
+        else 0
     )
 
     pipeline_fps = (
         processed_frames / total_time
-        if total_time > 0 else 0
+        if total_time > 0
+        else 0
     )
 
     average_latency = statistics.mean(inference_times)
@@ -221,50 +290,29 @@ def main():
     print(f"P95 latency:            {p95_latency:.2f} ms")
     print(f"Process RAM at end:     {ram_mb:.2f} MB")
 
+    # Save one benchmark row
+    benchmark_row = {
+        "timestamp": timestamp,
+        "model": args.model.name,
+        "model_format": model_format,
+        "video": args.video.name,
+        "device": args.device,
+        "image_size": args.imgsz,
+        "confidence": args.conf,
+        "max_frames": args.max_frames,
+        "frames": processed_frames,
+        "inference_fps": round(inference_fps, 2),
+        "pipeline_fps": round(pipeline_fps, 2),
+        "average_latency_ms": round(average_latency, 2),
+        "median_latency_ms": round(median_latency, 2),
+        "p95_latency_ms": round(p95_latency, 2),
+        "total_time_seconds": round(total_time, 2),
+        "process_ram_mb": round(ram_mb, 2),
+    }
+
+    save_benchmark(args.csv, benchmark_row)
+
     print(f"\nAnnotated video: {args.output}")
-
-    # Save benchmark CSV
-    args.csv = DEFAULT_CSV
-    args.csv.parent.mkdir(parents=True, exist_ok=True)
-
-    file_exists = args.csv.exists()
-
-    with open(args.csv, "a", newline="", encoding="utf-8") as file:
-        fields = [
-            "model",
-            "video",
-            "device",
-            "image_size",
-            "frames",
-            "inference_fps",
-            "pipeline_fps",
-            "average_latency_ms",
-            "median_latency_ms",
-            "p95_latency_ms",
-            "total_time_seconds",
-            "process_ram_mb"
-        ]
-
-        csv_writer = csv.DictWriter(file, fieldnames=fields)
-
-        if not file_exists:
-            csv_writer.writeheader()
-
-        csv_writer.writerow({
-            "model": args.model.name,
-            "video": args.video.name,
-            "device": args.device,
-            "image_size": args.imgsz,
-            "frames": processed_frames,
-            "inference_fps": round(inference_fps, 2),
-            "pipeline_fps": round(pipeline_fps, 2),
-            "average_latency_ms": round(average_latency, 2),
-            "median_latency_ms": round(median_latency, 2),
-            "p95_latency_ms": round(p95_latency, 2),
-            "total_time_seconds": round(total_time, 2),
-            "process_ram_mb": round(ram_mb, 2)
-        })
-
     print(f"Benchmark CSV: {args.csv}")
     print("\nBenchmark completed successfully.")
 

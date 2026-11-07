@@ -1,0 +1,3 @@
+timestamp,model,model_format,video,device,image_size,confidence,max_frames,frames,inference_fps,pipeline_fps,average_latency_ms,median_latency_ms,p95_latency_ms,total_time_seconds,process_ram_mb
+2026-11-07T17:52:56.497207+00:00,yolo11n_int8_v2.onnx,onnx,Manhattan.mp4,cpu,640,0.25,100,100,3.29,2.89,303.75,248.24,645.97,34.65,449.9
+2026-11-07T17:55:39.538558+00:00,yolo11n_int8_v2.onnx,onnx,Manhattan.mp4,cpu,640,0.25,100,100,5.21,4.49,192.05,187.64,269.64,22.26,451.42

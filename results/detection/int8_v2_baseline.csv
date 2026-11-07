@@ -1,0 +1,6 @@
+timestamp,model,model_format,video,device,image_size,confidence,max_frames,frames,inference_fps,pipeline_fps,average_latency_ms,median_latency_ms,p95_latency_ms,total_time_seconds,process_ram_mb
+2026-11-07T17:57:48.931172+00:00,yolo11n_int8_v2.onnx,onnx,Manhattan.mp4,cpu,640,0.25,100,100,4.66,4.04,214.8,208.58,301.92,24.75,451.0
+2026-11-07T17:58:26.764858+00:00,yolo11n_int8_v2.onnx,onnx,Manhattan.mp4,cpu,640,0.25,100,100,4.05,3.55,247.11,230.47,334.62,28.19,451.07
+2026-11-07T17:59:06.816259+00:00,yolo11n_int8_v2.onnx,onnx,Manhattan.mp4,cpu,640,0.25,100,100,4.27,3.73,234.37,225.45,306.77,26.83,452.61
+2026-11-07T17:59:45.046081+00:00,yolo11n_int8_v2.onnx,onnx,Manhattan.mp4,cpu,640,0.25,100,100,4.28,3.74,233.55,221.94,300.73,26.73,450.96
+2026-11-07T18:00:23.418713+00:00,yolo11n_int8_v2.onnx,onnx,Manhattan.mp4,cpu,640,0.25,100,100,4.27,3.71,233.98,226.05,285.27,26.93,452.21
